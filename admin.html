@@ -1,0 +1,107 @@
+cat << 'EOF' > admin.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body id="admin-page">
+    <div id="admin-login-view" class="container">
+        <h2>Admin Login</h2>
+        <div class="form-group">
+            <input type="email" id="admin-email" class="form-control" placeholder="Admin Email">
+        </div>
+        <div class="form-group">
+            <input type="password" id="admin-password" class="form-control" placeholder="Password">
+        </div>
+        <button class="btn btn-primary" onclick="app.adminLogin()">Login</button>
+    </div>
+
+    <div id="admin-dashboard-view" class="admin-layout hidden">
+        <div class="sidebar">
+            <h2>Admin Panel</h2>
+            <a href="#" onclick="app.switchAdminTab('dashboard')" class="active">Dashboard</a>
+            <a href="#" onclick="app.switchAdminTab('products')">Products</a>
+            <a href="#" onclick="app.switchAdminTab('payments')">Payments</a>
+            <button class="btn btn-danger" onclick="app.logout()" style="margin-top: auto;">Logout</button>
+        </div>
+        
+        <div class="admin-content">
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard">
+                <h1>Dashboard</h1>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>Total Users</h3><p id="stat-users">0</p></div>
+                    <div class="stat-card"><h3>Total Products</h3><p id="stat-products">0</p></div>
+                    <div class="stat-card"><h3>Revenue</h3><p id="stat-revenue">₹0</p></div>
+                    <div class="stat-card"><h3>Pending UPI</h3><p id="stat-pending">0</p></div>
+                </div>
+            </div>
+
+            <!-- Products Tab -->
+            <div id="tab-products" class="hidden">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <h1>Manage Products</h1>
+                    <button class="btn btn-primary" onclick="app.showAddProduct()">+ Add Product</button>
+                </div>
+                <table>
+                    <thead><tr><th>Image</th><th>Title</th><th>Type</th><th>Price</th><th>Action</th></tr></thead>
+                    <tbody id="admin-product-list"></tbody>
+                </table>
+            </div>
+
+            <!-- Payments Tab -->
+            <div id="tab-payments" class="hidden">
+                <h1>Manage Payments (UPI)</h1>
+                <table>
+                    <thead><tr><th>User</th><th>Product ID</th><th>UTR</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="admin-payment-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="add-product-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Add Product</h2>
+                <button class="close-modal" onclick="app.closeModal('add-product-modal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="prod-title" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="prod-desc" class="form-control"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="prod-type" class="form-control">
+                    <option value="course">Course (Video)</option>
+                    <option value="project">Project (Source Code Link)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Price (₹)</label>
+                <input type="number" id="prod-price" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Cover Image</label>
+                <input type="file" id="prod-image" class="form-control" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label>Content URL (Video MP4 or GitHub Link)</label>
+                <input type="url" id="prod-content" class="form-control">
+            </div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="app.saveProduct()">Save Product</button>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
+EOF
