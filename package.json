@@ -1,4 +1,3 @@
-cat << 'EOF' > package.json
 {
   "name": "marketplace-app",
   "version": "1.0.0",
@@ -10,4 +9,3 @@ cat << 'EOF' > package.json
     "crypto": "^1.0.1"
   }
 }
-EOF
