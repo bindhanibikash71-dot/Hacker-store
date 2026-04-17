@@ -1,0 +1,93 @@
+cat << 'EOF' > index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace | Courses & Projects</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">CodeMarket</a>
+        <div class="nav-links" id="nav-auth-section">
+            <button class="btn btn-outline" id="btn-login" onclick="app.showLogin()">Login</button>
+            <div id="user-profile" class="hidden">
+                <span id="user-email"></span>
+                <button class="btn btn-outline" onclick="app.showMyPurchases()">My Courses</button>
+                <button class="btn btn-danger" onclick="app.logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" id="main-view">
+        <h1>Latest Courses & Projects</h1>
+        <div class="grid" id="product-grid">
+            <!-- Products injected here -->
+        </div>
+    </div>
+
+    <div class="container hidden" id="purchases-view">
+        <h1>My Library</h1>
+        <button class="btn btn-outline" onclick="app.goHome()" style="margin-bottom: 1rem;">&larr; Back to Market</button>
+        <div class="grid" id="purchases-grid">
+            <!-- Purchased products injected here -->
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Authentication</h2>
+                <button class="close-modal" onclick="app.closeModal('auth-modal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="auth-email" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="auth-password" class="form-control">
+            </div>
+            <button class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;" onclick="app.emailLogin()">Login / Register</button>
+            <button class="btn btn-outline" style="width: 100%;" onclick="app.googleLogin()">Sign in with Google</button>
+        </div>
+    </div>
+
+    <!-- Course Player Modal -->
+    <div id="player-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2 id="player-title">Course Title</h2>
+                <button class="close-modal" onclick="app.closeModal('player-modal')">&times;</button>
+            </div>
+            <div class="video-container">
+                <video id="course-video" controls controlsList="nodownload"></video>
+            </div>
+            <p id="player-desc"></p>
+        </div>
+    </div>
+
+    <!-- UPI Checkout Modal -->
+    <div id="upi-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>UPI Payment Backup</h2>
+                <button class="close-modal" onclick="app.closeModal('upi-modal')">&times;</button>
+            </div>
+            <p>Scan the QR or pay to UPI ID: <strong>admin@upi</strong></p>
+            <p>Amount: ₹<span id="upi-amount"></span></p>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Enter Transaction ID (UTR)</label>
+                <input type="text" id="upi-utr" class="form-control">
+            </div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="app.submitUpiPayment()">Submit Payment Proof</button>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
+EOF
