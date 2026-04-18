@@ -1,11 +1,18 @@
 {
-  "name": "marketplace-app",
+  "name": "neonhub-x",
   "version": "1.0.0",
-  "scripts": {
-    "start": "npx serve ."
+  "description": "NeonHub X — Premium Digital Marketplace",
+  "private": true,
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
-    "razorpay": "^2.9.2",
-    "crypto": "^1.0.1"
-  }
+    "razorpay": "^2.9.2"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": ["marketplace", "digital-products", "razorpay", "firebase"],
+  "license": "MIT"
 }
