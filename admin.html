@@ -1,107 +1,654 @@
-cat << 'EOF' > admin.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeonHub X — Admin Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Admin-specific overrides */
+    .admin-topbar {
+      background: rgba(255,238,0,0.05);
+      border: 1px solid rgba(255,238,0,0.15);
+      border-radius: 10px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      font-size: 0.85rem;
+      color: var(--yellow);
+      font-family: var(--font-mono);
+    }
+    .admin-tab-bar {
+      display: flex;
+      gap: 0;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 5px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .admin-tab {
+      flex: 1;
+      min-width: 100px;
+      text-align: center;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .admin-tab.active {
+      background: linear-gradient(135deg, var(--violet), var(--cyan));
+      color: #fff;
+    }
+    .action-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .upi-row { font-size: 0.82rem; }
+  </style>
+
+  <!-- Firebase v9 Compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body id="admin-page">
-    <div id="admin-login-view" class="container">
-        <h2>Admin Login</h2>
+<body>
+
+<div class="bg-canvas">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+<div class="grid-overlay"></div>
+
+<!-- ── Admin Login Screen ── -->
+<div id="admin-login-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;z-index:1">
+  <div class="modal" style="transform:none;max-width:400px;width:100%">
+    <div class="modal-title glow-cyan" style="margin-bottom:6px">👑 Admin Panel</div>
+    <div class="modal-sub">Authorized personnel only</div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="input input-full" id="adm-email" type="email" placeholder="admin@neonhubx.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="input input-full" id="adm-pass" type="password" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="adminLogin()">🔐 Access Admin Panel</button>
+    <div style="margin-top:14px;text-align:center">
+      <a href="index.html" style="color:var(--muted);font-size:0.8rem;text-decoration:none">← Back to Marketplace</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Admin App Shell ── -->
+<div class="app-shell" id="admin-app" style="display:none">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">NeonHub X</div>
+      <span class="logo-tag">ADMIN PANEL</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Control Center</div>
+      <div class="nav-item active" onclick="showAdminTab('overview')"><span class="icon">📊</span> Overview</div>
+      <div class="nav-item" onclick="showAdminTab('products')"><span class="icon">📦</span> Products</div>
+      <div class="nav-item" onclick="showAdminTab('users')"><span class="icon">👥</span> Users</div>
+      <div class="nav-item" onclick="showAdminTab('transactions')"><span class="icon">💳</span> Transactions</div>
+      <div class="nav-item" onclick="showAdminTab('upi')"><span class="icon">📱</span> UPI Requests</div>
+      <div class="nav-item" onclick="showAdminTab('wallet')"><span class="icon">💰</span> Wallet Manager</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip" id="adm-user-chip">
+        <div class="user-avatar">👑</div>
+        <div>
+          <div class="user-name" id="adm-name">Admin</div>
+          <div class="user-role" style="color:var(--yellow)">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open')"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <h1 class="topbar-title" id="admin-topbar-title">Overview</h1>
+      <div class="topbar-right">
+        <span class="admin-crown">👑 ADMIN</span>
+        <button class="btn btn-ghost btn-sm" onclick="adminSignOut()">🚪 Sign Out</button>
+      </div>
+    </div>
+
+    <div class="admin-topbar">
+      ⚡ NeonHub X Admin — Full control over marketplace, users, products and payments
+    </div>
+
+    <div id="admin-view">
+      <div class="spinner" style="margin:60px auto"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Loading overlay placeholder -->
+<script src="firebase.js"></script>
+<script>
+'use strict';
+
+// ── Admin State ───────────────────────────────────────────────
+const Admin = {
+  user: null,
+  userData: null,
+  tab: 'overview'
+};
+
+const ADMIN_UID_LIST = []; // Optional: restrict to specific UIDs
+
+// ── Login ─────────────────────────────────────────────────────
+async function adminLogin() {
+  const email = document.getElementById('adm-email').value.trim();
+  const pass  = document.getElementById('adm-pass').value;
+  if (!email || !pass) { showToast('Enter credentials', 'warn'); return; }
+
+  showLoading('Authenticating...');
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email, pass);
+    const snap = await db.ref(`users/${cred.user.uid}`).once('value');
+    const data = snap.val();
+
+    if (!data || data.role !== 'admin') {
+      await auth.signOut();
+      hideLoading();
+      showToast('Access denied — not an admin account', 'error');
+      return;
+    }
+
+    Admin.user     = cred.user;
+    Admin.userData = data;
+    hideLoading();
+    bootAdmin();
+  } catch (e) {
+    hideLoading();
+    showToast('Login failed: ' + e.message, 'error');
+  }
+}
+
+function bootAdmin() {
+  document.getElementById('admin-login-screen').style.display = 'none';
+  document.getElementById('admin-app').style.display = 'flex';
+  document.getElementById('adm-name').textContent = Admin.userData?.name || 'Admin';
+  showAdminTab('overview');
+}
+
+async function adminSignOut() {
+  await auth.signOut();
+  location.reload();
+}
+
+// ── Tab Router ────────────────────────────────────────────────
+function showAdminTab(tab) {
+  Admin.tab = tab;
+  document.querySelectorAll('.sidebar .nav-item').forEach((el, i) => {
+    const tabs = ['overview','products','users','transactions','upi','wallet'];
+    el.classList.toggle('active', tabs[i] === tab);
+  });
+  const title = { overview:'Overview', products:'Manage Products', users:'Manage Users', transactions:'Transactions', upi:'UPI Requests', wallet:'Wallet Manager' };
+  document.getElementById('admin-topbar-title').textContent = title[tab] || tab;
+
+  switch (tab) {
+    case 'overview':     renderOverview(); break;
+    case 'products':     renderProducts(); break;
+    case 'users':        renderUsers(); break;
+    case 'transactions': renderTransactions(); break;
+    case 'upi':          renderUPI(); break;
+    case 'wallet':       renderWalletManager(); break;
+  }
+}
+
+// ── Overview ──────────────────────────────────────────────────
+async function renderOverview() {
+  document.getElementById('admin-view').innerHTML = `<div class="spinner" style="margin:60px auto"></div>`;
+  const stats = await DB.getStats();
+
+  document.getElementById('admin-view').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div class="glass-card stat-card"><span class="stat-icon">👥</span><div class="stat-value">${stats.users}</div><div class="stat-label">Total Users</div></div>
+      <div class="glass-card stat-card violet"><span class="stat-icon">📦</span><div class="stat-value violet">${stats.products}</div><div class="stat-label">Products</div></div>
+      <div class="glass-card stat-card magenta"><span class="stat-icon">💳</span><div class="stat-value magenta">${stats.sales}</div><div class="stat-label">Successful Sales</div></div>
+      <div class="glass-card stat-card"><span class="stat-icon">💰</span><div class="stat-value green">₹${(stats.revenue||0).toLocaleString()}</div><div class="stat-label">Total Revenue</div></div>
+    </div>
+
+    <div class="section-head" style="margin-top:8px">
+      <span class="section-title">Quick Actions</span>
+      <div class="section-line"></div>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="showAdminTab('products')">📦 Review Products</button>
+      <button class="btn btn-ghost" onclick="showAdminTab('upi')">📱 Check UPI Requests</button>
+      <button class="btn btn-ghost" onclick="showAdminTab('users')">👥 Manage Users</button>
+      <button class="btn btn-ghost" onclick="showAdminTab('wallet')">💰 Add Wallet Balance</button>
+    </div>
+
+    <div class="neon-divider"></div>
+
+    <div class="section-head">
+      <span class="section-title">Recent Transactions</span>
+      <div class="section-line"></div>
+    </div>
+    <div id="recent-txn-wrap"><div class="spinner" style="margin:30px auto"></div></div>`;
+
+  renderRecentTxns();
+}
+
+async function renderRecentTxns() {
+  const wrap = document.getElementById('recent-txn-wrap');
+  if (!wrap) return;
+  const txns = (await DB.getTransactions()).slice(0, 8);
+  if (txns.length === 0) { wrap.innerHTML = `<div class="empty-state"><span class="icon">💸</span><h3>No transactions yet</h3></div>`; return; }
+  wrap.innerHTML = `
+    <div class="glass-card" style="overflow:hidden">
+      <table class="data-table">
+        <thead><tr><th>User</th><th>Amount</th><th>Method</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          ${txns.map(t => `
+          <tr>
+            <td style="font-family:var(--font-mono);font-size:0.78rem">${escHtml(t.uid?.slice(0,8)||'—')}...</td>
+            <td class="glow-cyan">₹${(t.amount||0).toLocaleString()}</td>
+            <td>${escHtml(t.method||'—')}</td>
+            <td><span class="status-badge ${t.status==='success'?'success':t.status==='pending'?'pending':'failed'}">${t.status||'—'}</span></td>
+            <td style="font-size:0.78rem;color:var(--muted)">${new Date(t.createdAt||0).toLocaleDateString()}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ── Products ──────────────────────────────────────────────────
+async function renderProducts() {
+  document.getElementById('admin-view').innerHTML = `<div class="spinner" style="margin:60px auto"></div>`;
+  const products = await DB.getProducts();
+
+  document.getElementById('admin-view').innerHTML = `
+    <div class="action-bar">
+      <input class="input" id="prod-search-adm" placeholder="🔍 Search products..." oninput="filterAdminProducts()" style="max-width:280px">
+      <select class="select" id="prod-filter-adm" onchange="filterAdminProducts()">
+        <option value="all">All Status</option>
+        <option value="pending">Pending Review</option>
+        <option value="approved">Approved</option>
+      </select>
+    </div>
+    <div class="glass-card" style="overflow:hidden" id="products-table-wrap">
+      ${productsTableHTML(products)}
+    </div>`;
+}
+
+function productsTableHTML(products) {
+  if (products.length === 0) return `<div class="empty-state"><span class="icon">📦</span><h3>No products found</h3></div>`;
+  return `
+    <table class="data-table">
+      <thead><tr><th>Title</th><th>Seller</th><th>Category</th><th>Price</th><th>Sales</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${products.map(p => `
+        <tr>
+          <td>
+            <div style="font-weight:600">${escHtml(p.title||'Untitled')}</div>
+            <div style="font-size:0.72rem;color:var(--muted)">${escHtml(p.type||'')}</div>
+          </td>
+          <td style="font-size:0.8rem;color:var(--muted)">${escHtml(p.sellerName||'—')}</td>
+          <td><span class="chip" style="padding:3px 10px;font-size:0.7rem">${escHtml(p.category||'—')}</span></td>
+          <td class="glow-cyan">₹${(p.price||0).toLocaleString()}</td>
+          <td>${p.sales||0}</td>
+          <td><span class="status-badge ${p.approved?'success':'pending'}">${p.approved?'✅ Live':'⏳ Pending'}</span></td>
+          <td>
+            <div style="display:flex;gap:6px">
+              ${!p.approved ? `<button class="btn btn-sm" style="background:rgba(0,255,136,0.15);border:1px solid var(--green);color:var(--green)" onclick="approveProduct('${p.id}')">✅ Approve</button>` : ''}
+              ${p.approved ? `<button class="btn btn-sm btn-ghost" onclick="toggleFeature('${p.id}',${!p.featured})">${p.featured?'⭐ Unfeature':'⭐ Feature'}</button>` : ''}
+              <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button>
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+let _allProducts = [];
+async function filterAdminProducts() {
+  if (_allProducts.length === 0) _allProducts = await DB.getProducts();
+  const search = (document.getElementById('prod-search-adm')?.value||'').toLowerCase();
+  const filter = document.getElementById('prod-filter-adm')?.value || 'all';
+  let list = _allProducts;
+  if (search) list = list.filter(p => (p.title||'').toLowerCase().includes(search));
+  if (filter === 'pending')  list = list.filter(p => !p.approved);
+  if (filter === 'approved') list = list.filter(p =>  p.approved);
+  const wrap = document.getElementById('products-table-wrap');
+  if (wrap) wrap.innerHTML = productsTableHTML(list);
+}
+
+async function approveProduct(id) {
+  showLoading('Approving...');
+  await DB.updateProduct(id, { approved: true });
+  _allProducts = [];
+  hideLoading();
+  showToast('Product approved and live! ✅', 'success');
+  renderProducts();
+}
+
+async function toggleFeature(id, feat) {
+  await DB.updateProduct(id, { featured: feat });
+  _allProducts = [];
+  showToast(feat ? 'Product featured ⭐' : 'Removed from featured', 'success');
+  renderProducts();
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Delete this product permanently?')) return;
+  showLoading('Deleting...');
+  await DB.deleteProduct(id);
+  _allProducts = [];
+  hideLoading();
+  showToast('Product deleted', 'success');
+  renderProducts();
+}
+
+// ── Users ─────────────────────────────────────────────────────
+async function renderUsers() {
+  document.getElementById('admin-view').innerHTML = `<div class="spinner" style="margin:60px auto"></div>`;
+  const usersObj = await DB.getAllUsers();
+  const users    = Object.entries(usersObj).map(([uid, u]) => ({ ...u, uid }));
+
+  document.getElementById('admin-view').innerHTML = `
+    <div class="action-bar">
+      <input class="input" id="user-search" placeholder="🔍 Search users..." oninput="filterUsers()" style="max-width:280px">
+      <span style="color:var(--muted);font-size:0.82rem;font-family:var(--font-mono)">${users.length} users</span>
+    </div>
+    <div class="glass-card" style="overflow:hidden" id="users-table-wrap">
+      ${usersTableHTML(users)}
+    </div>`;
+
+  window._allUsers = users;
+}
+
+function usersTableHTML(users) {
+  if (users.length === 0) return `<div class="empty-state"><span class="icon">👥</span><h3>No users found</h3></div>`;
+  return `
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${users.map(u => `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="user-avatar" style="width:32px;height:32px;font-size:0.75rem">${(u.name||'U').slice(0,2).toUpperCase()}</div>
+              <span>${escHtml(u.name||'—')}</span>
+            </div>
+          </td>
+          <td style="font-size:0.82rem;color:var(--muted)">${escHtml(u.email||'—')}</td>
+          <td>
+            <span class="status-badge ${u.role==='admin'?'pending':'success'}">${u.role==='admin'?'👑 Admin':'🟢 User'}</span>
+          </td>
+          <td class="glow-green">₹${(u.wallet||0).toLocaleString()}</td>
+          <td style="font-size:0.78rem;color:var(--muted)">${new Date(u.createdAt||0).toLocaleDateString()}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm" onclick="makeAdmin('${u.uid}',${u.role!=='admin'})">
+                ${u.role==='admin'?'Remove Admin':'Make Admin'}
+              </button>
+              ${u.role !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.uid}')">🗑️</button>` : ''}
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function filterUsers() {
+  const search = (document.getElementById('user-search')?.value||'').toLowerCase();
+  const list   = (window._allUsers||[]).filter(u =>
+    (u.name||'').toLowerCase().includes(search) ||
+    (u.email||'').toLowerCase().includes(search)
+  );
+  const wrap = document.getElementById('users-table-wrap');
+  if (wrap) wrap.innerHTML = usersTableHTML(list);
+}
+
+async function makeAdmin(uid, isAdmin) {
+  if (!confirm(`${isAdmin ? 'Grant' : 'Revoke'} admin access?`)) return;
+  await DB.updateUser(uid, { role: isAdmin ? 'admin' : 'user' });
+  showToast(`Role updated!`, 'success');
+  renderUsers();
+}
+
+async function deleteUser(uid) {
+  if (!confirm('Delete this user permanently? This cannot be undone.')) return;
+  showLoading('Deleting user...');
+  await db.ref(`users/${uid}`).remove();
+  hideLoading();
+  showToast('User deleted', 'success');
+  renderUsers();
+}
+
+// ── Transactions ──────────────────────────────────────────────
+async function renderTransactions() {
+  document.getElementById('admin-view').innerHTML = `<div class="spinner" style="margin:60px auto"></div>`;
+  const txns = await DB.getTransactions();
+
+  document.getElementById('admin-view').innerHTML = `
+    <div class="section-head">
+      <span class="section-title">All Razorpay Transactions</span>
+      <div class="section-line"></div>
+      <span style="color:var(--muted);font-family:var(--font-mono);font-size:0.78rem">${txns.length} records</span>
+    </div>
+    <div class="glass-card" style="overflow:hidden">
+      ${txns.length === 0 ? `<div class="empty-state"><span class="icon">💸</span><h3>No transactions</h3></div>` : `
+      <table class="data-table">
+        <thead><tr><th>ID</th><th>User</th><th>Product</th><th>Amount</th><th>Method</th><th>Payment ID</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          ${txns.map(t => `
+          <tr>
+            <td style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted)">${t.id?.slice(0,10)}...</td>
+            <td style="font-size:0.8rem">${escHtml(t.uid?.slice(0,8)||'—')}...</td>
+            <td style="font-size:0.8rem">${escHtml(t.productId?.slice(0,10)||'—')}...</td>
+            <td class="glow-cyan">₹${(t.amount||0).toLocaleString()}</td>
+            <td>${escHtml(t.method||'—')}</td>
+            <td style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted)">${escHtml(t.paymentId||'—')}</td>
+            <td><span class="status-badge ${t.status==='success'?'success':t.status==='pending'?'pending':'failed'}">${t.status||'—'}</span></td>
+            <td style="font-size:0.78rem;color:var(--muted)">${new Date(t.createdAt||0).toLocaleDateString()}</td>
+    </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>`;
+}
+
+// ── UPI Requests ──────────────────────────────────────────────
+async function renderUPI() {
+  document.getElementById('admin-view').innerHTML = `<div class="spinner" style="margin:60px auto"></div>`;
+  const txns = await DB.getUPITransactions();
+
+  document.getElementById('admin-view').innerHTML = `
+    <div class="section-head">
+      <span class="section-title">UPI Payment Requests</span>
+      <div class="section-line"></div>
+      <span style="color:var(--yellow);font-family:var(--font-mono);font-size:0.78rem">${txns.filter(t=>t.status==='pending').length} pending</span>
+    </div>
+    <div class="glass-card" style="overflow:hidden">
+      ${txns.length === 0 ? `<div class="empty-state"><span class="icon">📱</span><h3>No UPI requests</h3></div>` : `
+      <table class="data-table">
+        <thead><tr><th>User</th><th>Amount</th><th>UTR</th><th>Product</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${txns.map(t => `
+          <tr class="upi-row">
+            <td>
+              <div>${escHtml(t.name||'—')}</div>
+              <div style="font-size:0.72rem;color:var(--muted)">${escHtml(t.email||'—')}</div>
+            </td>
+            <td class="glow-cyan">₹${(t.amount||0).toLocaleString()}</td>
+            <td style="font-family:var(--font-mono);font-size:0.78rem;color:var(--cyan)">${escHtml(t.utr||'—')}</td>
+            <td style="font-size:0.78rem">${escHtml(t.productId||'wallet top-up')}</td>
+            <td><span class="status-badge ${t.status==='approved'?'success':t.status==='rejected'?'failed':'pending'}">${t.status||'pending'}</span></td>
+            <td style="font-size:0.78rem;color:var(--muted)">${new Date(t.createdAt||0).toLocaleDateString()}</td>
+            <td>
+              ${t.status === 'pending' ? `
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-sm" style="background:rgba(0,255,136,0.12);border:1px solid var(--green);color:var(--green)" onclick="approveUPI('${t.id}','${t.uid}',${t.amount},'${t.productId||''}')">✅ Approve</button>
+                <button class="btn btn-danger btn-sm" onclick="rejectUPI('${t.id}')">❌ Reject</button>
+              </div>` : '—'}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>`;
+}
+
+async function approveUPI(txnId, uid, amount, productId) {
+  if (!confirm(`Approve UPI payment of ₹${amount}?`)) return;
+  showLoading('Processing...');
+  try {
+    await DB.updateUPITransaction(txnId, { status: 'approved', approvedAt: Date.now() });
+    if (productId && productId !== 'undefined' && productId.trim()) {
+      // Product purchase — unlock
+      await DB.recordPurchase(uid, productId, { amount, method: 'upi', status: 'success' });
+    } else {
+      // Wallet top-up
+      await DB.addWallet(uid, amount);
+    }
+    hideLoading();
+    showToast('UPI payment approved! ✅', 'success');
+    renderUPI();
+  } catch (e) {
+    hideLoading();
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function rejectUPI(txnId) {
+  if (!confirm('Reject this UPI payment?')) return;
+  await DB.updateUPITransaction(txnId, { status: 'rejected', rejectedAt: Date.now() });
+  showToast('UPI request rejected', 'warn');
+  renderUPI();
+}
+
+// ── Wallet Manager ────────────────────────────────────────────
+async function renderWalletManager() {
+  document.getElementById('admin-view').innerHTML = `<div class="spinner" style="margin:60px auto"></div>`;
+  const usersObj = await DB.getAllUsers();
+  const users    = Object.entries(usersObj).map(([uid,u]) => ({ ...u, uid }));
+
+  document.getElementById('admin-view').innerHTML = `
+    <div style="max-width:560px;margin-bottom:28px">
+      <div class="glass-card" style="padding:28px">
+        <div class="section-title" style="margin-bottom:20px">💰 Add Wallet Balance</div>
         <div class="form-group">
-            <input type="email" id="admin-email" class="form-control" placeholder="Admin Email">
+          <label class="form-label">Select User</label>
+          <select class="select input-full" id="wallet-user-select">
+            <option value="">— Select User —</option>
+            ${users.map(u => `<option value="${u.uid}">${escHtml(u.name||'User')} (${escHtml(u.email||'')})</option>`).join('')}
+          </select>
         </div>
         <div class="form-group">
-            <input type="password" id="admin-password" class="form-control" placeholder="Password">
+          <label class="form-label">Amount (₹)</label>
+          <input class="input input-full" id="wallet-add-amount" type="number" placeholder="Enter amount to credit">
         </div>
-        <button class="btn btn-primary" onclick="app.adminLogin()">Login</button>
+        <button class="btn btn-primary" onclick="addWalletBalance()">💰 Add Balance</button>
+      </div>
     </div>
 
-    <div id="admin-dashboard-view" class="admin-layout hidden">
-        <div class="sidebar">
-            <h2>Admin Panel</h2>
-            <a href="#" onclick="app.switchAdminTab('dashboard')" class="active">Dashboard</a>
-            <a href="#" onclick="app.switchAdminTab('products')">Products</a>
-            <a href="#" onclick="app.switchAdminTab('payments')">Payments</a>
-            <button class="btn btn-danger" onclick="app.logout()" style="margin-top: auto;">Logout</button>
-        </div>
-        
-        <div class="admin-content">
-            <!-- Dashboard Tab -->
-            <div id="tab-dashboard">
-                <h1>Dashboard</h1>
-                <div class="stats-grid">
-                    <div class="stat-card"><h3>Total Users</h3><p id="stat-users">0</p></div>
-                    <div class="stat-card"><h3>Total Products</h3><p id="stat-products">0</p></div>
-                    <div class="stat-card"><h3>Revenue</h3><p id="stat-revenue">₹0</p></div>
-                    <div class="stat-card"><h3>Pending UPI</h3><p id="stat-pending">0</p></div>
-                </div>
-            </div>
-
-            <!-- Products Tab -->
-            <div id="tab-products" class="hidden">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                    <h1>Manage Products</h1>
-                    <button class="btn btn-primary" onclick="app.showAddProduct()">+ Add Product</button>
-                </div>
-                <table>
-                    <thead><tr><th>Image</th><th>Title</th><th>Type</th><th>Price</th><th>Action</th></tr></thead>
-                    <tbody id="admin-product-list"></tbody>
-                </table>
-            </div>
-
-            <!-- Payments Tab -->
-            <div id="tab-payments" class="hidden">
-                <h1>Manage Payments (UPI)</h1>
-                <table>
-                    <thead><tr><th>User</th><th>Product ID</th><th>UTR</th><th>Status</th><th>Action</th></tr></thead>
-                    <tbody id="admin-payment-list"></tbody>
-                </table>
-            </div>
-        </div>
+    <div class="section-head">
+      <span class="section-title">User Wallets</span>
+      <div class="section-line"></div>
     </div>
+    <div class="glass-card" style="overflow:hidden">
+      <table class="data-table">
+        <thead><tr><th>User</th><th>Email</th><th>Wallet Balance</th></tr></thead>
+        <tbody>
+          ${users.map(u => `
+          <tr>
+            <td>${escHtml(u.name||'—')}</td>
+            <td style="color:var(--muted);font-size:0.82rem">${escHtml(u.email||'—')}</td>
+            <td class="glow-green" style="font-family:var(--font-head);font-size:1rem">₹${(u.wallet||0).toLocaleString()}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
 
-    <!-- Add Product Modal -->
-    <div id="add-product-modal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Add Product</h2>
-                <button class="close-modal" onclick="app.closeModal('add-product-modal')">&times;</button>
-            </div>
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" id="prod-title" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="prod-desc" class="form-control"></textarea>
-            </div>
-            <div class="form-group">
-                <label>Type</label>
-                <select id="prod-type" class="form-control">
-                    <option value="course">Course (Video)</option>
-                    <option value="project">Project (Source Code Link)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Price (₹)</label>
-                <input type="number" id="prod-price" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>Cover Image</label>
-                <input type="file" id="prod-image" class="form-control" accept="image/*">
-            </div>
-            <div class="form-group">
-                <label>Content URL (Video MP4 or GitHub Link)</label>
-                <input type="url" id="prod-content" class="form-control">
-            </div>
-            <button class="btn btn-primary" style="width: 100%;" onclick="app.saveProduct()">Save Product</button>
-        </div>
-    </div>
+async function addWalletBalance() {
+  const uid    = document.getElementById('wallet-user-select')?.value;
+  const amount = document.getElementById('wallet-add-amount')?.value;
+  if (!uid || !amount) { showToast('Select user and enter amount', 'warn'); return; }
+  showLoading('Adding balance...');
+  try {
+    await DB.addWallet(uid, Number(amount));
+    hideLoading();
+    showToast(`₹${amount} added to wallet! ✅`, 'success');
+    renderWalletManager();
+  } catch (e) {
+    hideLoading();
+    showToast('Error: ' + e.message, 'error');
+  }
+}
 
-    <script type="module" src="app.js"></script>
+// ── Utilities ─────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const icons = { success:'✅', error:'❌', warn:'⚠️', info:'💡' };
+  const toast  = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span class="toast-icon">${icons[type]||'💡'}</span><span class="toast-msg">${escHtml(msg)}</span><span class="toast-close" onclick="this.parentElement.remove()">✕</span>`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 4500);
+}
+
+function showLoading(text = 'Loading...') {
+  let ov = document.getElementById('loading-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'loading-overlay';
+    ov.className = 'loading-overlay';
+    ov.innerHTML = `<div class="spinner"></div><div class="loading-text">${escHtml(text)}</div>`;
+    document.body.appendChild(ov);
+  } else {
+    ov.querySelector('.loading-text').textContent = text;
+    ov.style.display = 'flex';
+  }
+}
+function hideLoading() {
+  const ov = document.getElementById('loading-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Check if already logged in as admin
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    const snap = await db.ref(`users/${user.uid}`).once('value');
+    const data = snap.val();
+    if (data?.role === 'admin') {
+      Admin.user     = user;
+      Admin.userData = data;
+      bootAdmin();
+    }
+  }
+});
+</script>
 </body>
 </html>
-EOF
