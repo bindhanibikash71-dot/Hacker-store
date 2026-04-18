@@ -1,18 +1,52 @@
+// ============================================================
+// NeonHub X — /api/verify-payment.js
+// Vercel Serverless Function — Razorpay Signature Verification
+// ============================================================
+
 const crypto = require('crypto');
 
-export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature
+  } = req.body;
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return res.status(400).json({ success: false, error: 'Missing payment details' });
+  }
+
+  try {
     const secret = process.env.RAZORPAY_KEY_SECRET;
+    const body   = razorpay_order_id + '|' + razorpay_payment_id;
 
-    const shasum = crypto.createHmac('sha256', secret);
-    shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
-    const digest = shasum.digest('hex');
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(body)
+      .digest('hex');
 
-    if (digest === razorpay_signature) {
-        res.status(200).json({ success: true });
+    const isValid = expectedSignature === razorpay_signature;
+
+    if (isValid) {
+      return res.status(200).json({
+        success:    true,
+        payment_id: razorpay_payment_id,
+        order_id:   razorpay_order_id
+      });
     } else {
-        res.status(400).json({ success: false, message: 'Invalid signature' });
+      return res.status(400).json({ success: false, error: 'Invalid payment signature' });
     }
-}
+  } catch (error) {
+    console.error('Verification error:', error);
+    return res.status(500).json({ success: false, error: 'Verification failed', details: error.message });
+  }
+};
