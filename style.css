@@ -1,4 +1,3 @@
-cat << 'EOF' > style.css
 :root {
   --primary: #4f46e5;
   --primary-hover: #4338ca;
@@ -62,4 +61,3 @@ th { background: #f9fafb; font-weight: 600; }
 /* Player */
 .video-container { width: 100%; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; }
 .video-container video { width: 100%; display: block; }
-EOF
